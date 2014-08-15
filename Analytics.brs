@@ -11,12 +11,14 @@ Function Analytics(userId as String, apikey as string, port as Object) as Object
 			AddEvent: add_analytics
 			ViewScreen: ViewScreen
 			LogEvent: LogEvent
-			HandleSubmissionTimer: CheckTimer
+			HandleAnalyticsEvents: handle_analytics
 			userId: userId
 			port: port
 
 			queue: invalid
 			timer: invalid
+
+			lastRequest: invalid
 		}
 
 		GetGlobalAA().AddReplace("Analytics", this)
@@ -104,19 +106,33 @@ Function submit_analytics() as Void
 		transfer.EnablePeerVerification(false)
 		transfer.EnableHostVerification(false)
 		transfer.RetainBodyOnError(true)
-		transfer.AsyncPostFromString(json)
 
-		GetGlobalAA().AnalyticsTranfer = transfer 'We need to keep an active reference to the transfer because we opted for an Async POST.  Make the call synchronous if you don't like it.
+		m.lastRequest = transfer
+
+		transfer.AsyncPostFromString(json)
 
 	end if
 	m.timer.mark()
 
 End Function
 
-Function CheckTimer()
+Function handle_analytics(msg)
 	if m.timer.totalSeconds() > 60 then
 		m.Submit()
 	end if
+
+	if type(msg) = "roUrlEvent" AND m.lastRequest <> invalid AND m.lastRequest.GetIdentity() = msg.GetSourceIdentity()
+		responseString = msg.GetString()
+		response = ParseJSON(responseString)
+		
+		'Check for errors
+		if NOT response.DoesExist("success")
+			Print "*** There was an error submitting Analytics to Segment.IO: " + responseString
+		end if
+
+		m.lastRequest = invalid
+	End If
+
 End Function
 
 Function AnalyticsDateTime() as String

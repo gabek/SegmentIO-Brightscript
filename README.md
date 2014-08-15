@@ -30,7 +30,8 @@ The above will set up an initial "Identify" call to Segment.IO in order to start
     while true
         msg = wait(0,MessagePort)
         'You do stuff with events in your app here
-        Analytics.HandleSubmissionTimer()
+        Analytics = GetSession().Analytics
+        Analytics.HandleAnalyticsEvents(msg)
     end while
 
 
