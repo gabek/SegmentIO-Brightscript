@@ -10,7 +10,7 @@ Function Analytics(userId as String, apikey as string, port as Object) as Object
 			Submit: submit_analytics
 			AddEvent: add_analytics
 			ViewScreen: ViewScreen
-			LogEvent: LogEvent
+			AddSessionDetails: AddSessionDetails
 			HandleAnalyticsEvents: handle_analytics
 			userId: userId
 			port: port
@@ -40,9 +40,7 @@ Function init_analytics() as void
 	Identify = CreateObject("roAssociativeArray")
 	Identify.SetModeCaseSensitive()
 	Identify.action = "identify"
-	Identify.userId = m.userId
-
-	Identify.timestamp = AnalyticsDateTime()
+	m.AddSessionDetails(Identify)
 
 	m.queue.push(Identify)
 
@@ -54,20 +52,22 @@ Function ViewScreen(screenName as String)
 	event = CreateObject("roAssociativeArray")
 	event.action = "screen"
 	event.name = screenName
-	m.AddEvent(event)
+	m.AddSessionDetails(event)
+	m.queue.push(event)
 End Function
 
-Function LogEvent(eventString as String)
+Function add_analytics(eventName as string, properties = invalid as Object)
 	event = CreateObject("roAssociativeArray")
 	event.action = "track"
-	event.event = eventString
-	m.AddEvent(event)
+	event.event = eventName
+	event.properties = properties
+	m.AddSessionDetails(event)
+	m.queue.push(event)
 End Function
 
-Function add_analytics(event as object)
+Function AddSessionDetails(event as Object)
 	event.timestamp = AnalyticsDateTime()
 	event.userId = m.userId
-	m.queue.push(event)
 End Function
 
 Function submit_analytics() as Void

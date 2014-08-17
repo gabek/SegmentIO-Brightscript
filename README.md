@@ -44,20 +44,15 @@ Utilizing your reference to the **Analytics** object you initialized above you c
 **ViewScreen** takes a simple string parameter like so: `Analytics.ViewScreen("VideoContentGridScreen")`
 
 ###**Events**
-**LogEvent** takes in a [roAssociativeArray](http://sdkdocs.roku.com/display/sdkdoc/roAssociativeArray) of details for your event.
+**LogEvent** takes in a string with the event that took place and an optional [roAssociativeArray](http://sdkdocs.roku.com/display/sdkdoc/roAssociativeArray) of details for your event.
 
 
-	action = CreateObject("roAssociativeArray")
-	action.event = "Button Pressed"
-	
-	action.properties = CreateObject("roAssociativeArray")
-	action.properties.buttonName = "Back"
+	details = CreateObject("roAssociativeArray")
+	details.buttonName = "Back"
 	
 	Analytics = GetSession().Analytics
-	Analytics.AddEvent(action)
+	Analytics.AddEvent("Button Pressed", details)
 	
-A convinience function for simple actions without context can be fired with `Analytics.LogEvent("Back Button Pressed")`
-
 
 **Details**
 -----------
