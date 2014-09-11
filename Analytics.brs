@@ -68,6 +68,16 @@ End Function
 Function AddSessionDetails(event as Object)
 	event.timestamp = AnalyticsDateTime()
 	event.userId = m.userId
+
+	if NOT event.DoesExist("options")
+		options = CreateObject("roAssociativeArray")
+		event.options = options
+	end if
+
+	library = CreateObject("roAssociativeArray")
+	library.name = "SegmentIO-Brightscript"
+	library.version = "1.0"
+	options.library = library
 End Function
 
 Function submit_analytics() as Void
