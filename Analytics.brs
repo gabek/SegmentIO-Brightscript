@@ -1,9 +1,11 @@
 Function Analytics(userId as String, apikey as string, port as Object) as Object
-	if GetGlobalAA().DoesExist("Analytics") THEN
+	if GetGlobalAA().DoesExist("Analytics")
 		return GetGlobalAA().Analytics
 	else
 		this = {
 			type: "Analytics"
+			version: "1.0.2"
+
 			apikey: apikey
 
 			Init: init_analytics
@@ -12,8 +14,13 @@ Function Analytics(userId as String, apikey as string, port as Object) as Object
 			ViewScreen: ViewScreen
 			AddSessionDetails: AddSessionDetails
 			HandleAnalyticsEvents: handle_analytics
+			GetGeoData: getGeoData_analytics
+
 			userId: userId
 			port: port
+
+			useGeoData: true
+			geoData: invalid
 
 			queue: invalid
 			timer: invalid
@@ -30,6 +37,10 @@ Function Analytics(userId as String, apikey as string, port as Object) as Object
 End Function
 
 Function init_analytics() as void
+	if m.useGeoData = true
+		m.GetGeoData()
+	end if
+
 	m.SetModeCaseSensitive()
 
 	m.queue = CreateObject("roArray", 0, true)
@@ -76,8 +87,10 @@ Function AddSessionDetails(event as Object)
 
 	library = CreateObject("roAssociativeArray")
 	library.name = "SegmentIO-Brightscript"
-	library.version = "1.0"
-	options.library = library
+	library.version = m.version
+
+	event.options.library = library
+
 End Function
 
 Function submit_analytics() as Void
@@ -91,10 +104,46 @@ Function submit_analytics() as Void
 
 		batch.context = CreateObject("roAssociativeArray")
 		batch.context.SetModeCaseSensitive()
+
 		device = CreateObject("roDeviceInfo")
-		batch.context.deviceModel = device.GetModel()
-		batch.context.deviceVersion = device.GetVersion()
-		batch.context.ipAddress = GetIPAddress()
+
+		deviceInfo = CreateObject("roAssociativeArray")
+		deviceInfo.model = device.GetModel()
+		deviceInfo.version = device.GetVersion()
+		deviceInfo.manufacturer = "Roku"
+		deviceInfo.name = device.GetModelDisplayName()
+		deviceInfo.id = device.GetDeviceUniqueId()
+		batch.context.device = deviceInfo
+
+		batch.context.ip = m.ipAddress
+		batch.context.os = device.GetVersion()
+
+		library = CreateObject("roAssociativeArray")
+		library.name = "SegmentIO-Brightscript"
+		library.version = m.version
+		batch.context.library = library
+
+		if m.geoData <> invalid
+			location = CreateObject("roAssociativeArray")
+			if m.geoData.DoesExist("country_code") then location.country = m.geoData.country_code
+			if m.geoData.DoesExist("city") then location.city = m.geoData.city
+			if m.geoData.DoesExist("longitude") then location.longitude = m.geoData.longitude
+			if m.geoData.DoesExist("latitude") then location.latitude = m.geoData.latitude
+			batch.context.location = location
+
+			if m.geoData.DoesExist("ip") then batch.context.ip = m.geoData.ip
+		end if
+
+		locale = strReplace(device.GetCurrentLocale(), "_", "-")
+		batch.context.locale = locale
+
+		screen = CreateObject("roAssociativeArray")
+		screen.width = device.GetDisplaySize().w
+		screen.height = device.getDisplaySize().h
+		screen.type = device.GetDisplayType()
+		screen.mode = device.GetDisplayMode()
+		screen.ratio = device.GetDisplayAspectRatio()
+		batch.context.screen = screen
 
 		json = strReplace(FormatJson(batch), "userid", "userId") 'Because of the wonky way roAssociativeArrays keys don't care about case :\
 
@@ -149,6 +198,19 @@ Function AnalyticsDateTime() as String
 	date = CreateObject("roDateTime")
 	date.mark()
 	return DateToISO8601String(date, true)
+End Function
+
+
+'This queries the telize open GeoIP service Telize to get Geo and public IP data
+Function getGeoData_analytics()
+	url = "http://www.telize.com/geoip"
+
+	transfer = CreateObject("roUrlTransfer")
+	transfer.SetUrl(url)
+	data = transfer.GetToString()
+
+	object = ParseJSON(data)
+	m.geoData = object
 End Function
 
 
