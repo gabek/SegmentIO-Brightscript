@@ -79,6 +79,7 @@ End Function
 Function AddSessionDetails(event as Object)
 	event.timestamp = AnalyticsDateTime()
 	event.userId = m.userId
+	event.context = CreateObject("roAssociativeArray")
 
 	if NOT event.DoesExist("options")
 		options = CreateObject("roAssociativeArray")
@@ -90,6 +91,41 @@ Function AddSessionDetails(event as Object)
 	library.version = m.version
 
 	event.options.library = library
+
+	device = CreateObject("roDeviceInfo")
+
+	deviceInfo = CreateObject("roAssociativeArray")
+	deviceInfo.model = device.GetModel()
+	deviceInfo.version = device.GetVersion()
+	deviceInfo.manufacturer = "Roku"
+	deviceInfo.name = device.GetModelDisplayName()
+	deviceInfo.id = device.GetDeviceUniqueId()
+	event.context.device = deviceInfo
+
+	if m.geoData <> invalid
+		location = CreateObject("roAssociativeArray")
+		if m.geoData.DoesExist("country_code") then location.country = m.geoData.country_code
+		if m.geoData.DoesExist("city") then location.city = m.geoData.city
+		if m.geoData.DoesExist("longitude") then location.longitude = m.geoData.longitude
+		if m.geoData.DoesExist("latitude") then location.latitude = m.geoData.latitude
+		event.context.location = location
+
+		if m.geoData.DoesExist("ip") then event.context.ip = m.geoData.ip
+	end if
+
+	event.context.ip = m.ipAddress
+	event.context.os = device.GetVersion()
+
+	locale = strReplace(device.GetCurrentLocale(), "_", "-")
+	event.context.locale = locale
+
+	screen = CreateObject("roAssociativeArray")
+	screen.width = device.GetDisplaySize().w
+	screen.height = device.getDisplaySize().h
+	screen.type = device.GetDisplayType()
+	screen.mode = device.GetDisplayMode()
+	screen.ratio = device.GetDisplayAspectRatio()
+	event.context.screen = screen
 
 End Function
 
@@ -105,45 +141,10 @@ Function submit_analytics() as Void
 		batch.context = CreateObject("roAssociativeArray")
 		batch.context.SetModeCaseSensitive()
 
-		device = CreateObject("roDeviceInfo")
-
-		deviceInfo = CreateObject("roAssociativeArray")
-		deviceInfo.model = device.GetModel()
-		deviceInfo.version = device.GetVersion()
-		deviceInfo.manufacturer = "Roku"
-		deviceInfo.name = device.GetModelDisplayName()
-		deviceInfo.id = device.GetDeviceUniqueId()
-		batch.context.device = deviceInfo
-
-		batch.context.ip = m.ipAddress
-		batch.context.os = device.GetVersion()
-
 		library = CreateObject("roAssociativeArray")
 		library.name = "SegmentIO-Brightscript"
 		library.version = m.version
 		batch.context.library = library
-
-		if m.geoData <> invalid
-			location = CreateObject("roAssociativeArray")
-			if m.geoData.DoesExist("country_code") then location.country = m.geoData.country_code
-			if m.geoData.DoesExist("city") then location.city = m.geoData.city
-			if m.geoData.DoesExist("longitude") then location.longitude = m.geoData.longitude
-			if m.geoData.DoesExist("latitude") then location.latitude = m.geoData.latitude
-			batch.context.location = location
-
-			if m.geoData.DoesExist("ip") then batch.context.ip = m.geoData.ip
-		end if
-
-		locale = strReplace(device.GetCurrentLocale(), "_", "-")
-		batch.context.locale = locale
-
-		screen = CreateObject("roAssociativeArray")
-		screen.width = device.GetDisplaySize().w
-		screen.height = device.getDisplaySize().h
-		screen.type = device.GetDisplayType()
-		screen.mode = device.GetDisplayMode()
-		screen.ratio = device.GetDisplayAspectRatio()
-		batch.context.screen = screen
 
 		json = strReplace(FormatJson(batch), "userid", "userId") 'Because of the wonky way roAssociativeArrays keys don't care about case :\
 
