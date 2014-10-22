@@ -186,7 +186,7 @@ Function handle_analytics(msg)
 		response = ParseJSON(responseString)
 		
 		'Check for errors
-		if NOT response.DoesExist("success")
+		if response <> invalid AND NOT response.DoesExist("success")
 			Print "*** There was an error submitting Analytics to Segment.IO: " + responseString
 		end if
 
