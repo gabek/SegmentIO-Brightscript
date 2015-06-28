@@ -2,9 +2,11 @@ Function Analytics(userId as String, apikey as string, port as Object) as Object
 	if GetGlobalAA().DoesExist("Analytics")
 		return GetGlobalAA().Analytics
 	else
+
+		appInfo = CreateObject("roAppInfo")
 		this = {
 			type: "Analytics"
-			version: "1.0.2"
+			version: "1.0.3"
 
 			apikey: apikey
 
@@ -15,6 +17,10 @@ Function Analytics(userId as String, apikey as string, port as Object) as Object
 			AddSessionDetails: AddSessionDetails
 			HandleAnalyticsEvents: handle_analytics
 			GetGeoData: getGeoData_analytics
+
+			UserAgent: appInfo.GetTitle() + " - " + appInfo.GetVersion()
+			AppVersion: appInfo.GetVersion()
+			AppName: appInfo.GetTitle()
 
 			userId: userId
 			port: port
@@ -102,6 +108,15 @@ Function AddSessionDetails(event as Object)
 	deviceInfo.id = device.GetDeviceUniqueId()
 	event.context.device = deviceInfo
 
+	event.context.app = CreateObject("roAssociativeArray")
+	event.context.app.name = m.AppName
+	event.context.app.version = m.AppVersion
+	event.context.useragent = m.useragent
+
+	event.context.os = CreateObject("roAssociativeArray")
+	event.context.os.version = device.GetVersion()
+	event.context.os.name = "Roku"
+
 	if m.geoData <> invalid
 		location = CreateObject("roAssociativeArray")
 		if m.geoData.DoesExist("country_code") then location.country = m.geoData.country_code
@@ -153,7 +168,7 @@ Function submit_analytics() as Void
 		transfer = CreateObject("roUrlTransfer")
 
 		'Authentication
-		Auth = CreateObject("roByteArray") 
+		Auth = CreateObject("roByteArray")
 		Auth.FromAsciiString(m.apikey + ":")
 
 		transfer.AddHeader("Authorization", "Basic " + Auth.ToBase64String())
@@ -184,7 +199,7 @@ Function handle_analytics(msg)
 	if type(msg) = "roUrlEvent" AND m.lastRequest <> invalid AND m.lastRequest.GetIdentity() = msg.GetSourceIdentity()
 		responseString = msg.GetString()
 		response = ParseJSON(responseString)
-		
+
 		'Check for errors
 		if response <> invalid AND NOT response.DoesExist("success")
 			Print "*** There was an error submitting Analytics to Segment.IO: " + responseString
