@@ -61,7 +61,7 @@ Function init_analytics() as void
 
 	m.queue.push(Identify)
 
-	print "Anlytics Initialized..."
+	print "Analytics Initialized..."
 
 End Function
 
