@@ -212,8 +212,7 @@ End Function
 
 Function AnalyticsDateTime() as String
 	date = CreateObject("roDateTime")
-	date.mark()
-	return DateToISO8601String(date, true)
+	return date.ToISOString() 'works as of 6.2 firmware
 End Function
 
 
@@ -227,31 +226,4 @@ Function getGeoData_analytics()
 
 	object = ParseJSON(data)
 	m.geoData = object
-End Function
-
-
-'From http://forums.roku.com/viewtopic.php?p=336966&sid=393c92b8708c0ba9f00c2650d60fbd69
-Function DateToISO8601String(date As Object, includeZ = True As Boolean) As String
-   iso8601 = PadLeft(date.GetYear().ToStr(), "0", 4)
-   iso8601 = iso8601 + "-"
-   iso8601 = iso8601 + PadLeft(date.GetMonth().ToStr(), "0", 2)
-   iso8601 = iso8601 + "-"
-   iso8601 = iso8601 + PadLeft(date.GetDayOfMonth().ToStr(), "0", 2)
-   iso8601 = iso8601 + "T"
-   iso8601 = iso8601 + PadLeft(date.GetHours().ToStr(), "0", 2)
-   iso8601 = iso8601 + ":"
-   iso8601 = iso8601 + PadLeft(date.GetMinutes().ToStr(), "0", 2)
-   iso8601 = iso8601 + ":"
-   iso8601 = iso8601 + PadLeft(date.GetSeconds().ToStr(), "0", 2)
-   If includeZ Then
-      iso8601 = iso8601 + "Z"
-   End If
-   Return iso8601
-End Function
-
-Function PadLeft(value As String, padChar As String, totalLength As Integer) As String
-   While value.Len() < totalLength
-      value = padChar + value
-   End While
-   Return value
 End Function
