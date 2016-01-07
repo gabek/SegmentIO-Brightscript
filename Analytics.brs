@@ -1,257 +1,255 @@
-Function Analytics(userId as String, apikey as string, port as Object) as Object
-	if GetGlobalAA().DoesExist("Analytics")
-		return GetGlobalAA().Analytics
-	else
+function Analytics(userId as String, apiKey as String, port as Object) as Object
+    if GetGlobalAA().DoesExist("Analytics")
+        return GetGlobalAA().Analytics
+    else
 
-		appInfo = CreateObject("roAppInfo")
-		this = {
-			type: "Analytics"
-			version: "1.0.3"
-
-			apikey: apikey
+        appInfo = CreateObject("roAppInfo")
+        this = {
+            type: "Analytics"
+            version: "1.0.4"
 
-			Init: init_analytics
-			Submit: submit_analytics
-			AddEvent: add_analytics
-			ViewScreen: ViewScreen
-			AddSessionDetails: AddSessionDetails
-			HandleAnalyticsEvents: handle_analytics
-			GetGeoData: getGeoData_analytics
+            apiKey: apiKey
 
-			UserAgent: appInfo.GetTitle() + " - " + appInfo.GetVersion()
-			AppVersion: appInfo.GetVersion()
-			AppName: appInfo.GetTitle()
-
-			userId: userId
-			port: port
-
-			useGeoData: true
-			geoData: invalid
-
-			queue: invalid
-			timer: invalid
-
-			lastRequest: invalid
-		}
-
-		GetGlobalAA().AddReplace("Analytics", this)
-		this.init()
-	end if
-
-	return this
-
-End Function
-
-Function init_analytics() as void
-	if m.useGeoData = true
-		m.GetGeoData()
-	end if
+            Init: Init
+            Submit: Submit
+            Track: Track
+            Page: Page
+            AddSessionDetails: AddSessionDetails
+            Handle: Handle
+            
+            GetExternalIP: GetExternalIP
 
-	m.SetModeCaseSensitive()
-
-	m.queue = CreateObject("roArray", 0, true)
+            UserAgent: appInfo.GetTitle() + " - " + appInfo.GetVersion()
+            AppVersion: appInfo.GetVersion()
+            AppName: appInfo.GetTitle()
 
-	m.timer = CreateObject("roTimeSpan")
-	m.timer.mark()
+            userId: userId
+            port: port
+
+            queue: invalid
+            timer: invalid  
+
+            lastRequest: invalid
+        }
+
+        GetGlobalAA().AddReplace("Analytics", this)
+        this.init()        
+    end if
+
+    return this
 
-	Identify = CreateObject("roAssociativeArray")
-	Identify.SetModeCaseSensitive()
-	Identify.action = "identify"
-	m.AddSessionDetails(Identify)
+end function
+
+function Init() as void
+
+    m.SetModeCaseSensitive()
+
+    m.queue = CreateObject("roArray", 0, true)
+
+    m.timer = CreateObject("roTimeSpan")
+    m.timer.mark()
 
-	m.queue.push(Identify)
-
-	print "Analytics Initialized..."
+    'print "Analytics Initialized..."
+    
+    m.GetExternalIP()
 
-End Function
+end function
 
-Function ViewScreen(screenName as String)
-	event = CreateObject("roAssociativeArray")
-	event.action = "screen"
-	event.name = screenName
-	m.AddSessionDetails(event)
-	m.queue.push(event)
-End Function
+function Page(screenName as String)
+    event = CreateObject("roAssociativeArray")
+    event.action = "screen"
+    event.name = screenName
+    m.AddSessionDetails(event)
+    m.queue.push(event)
+end function
 
-Function add_analytics(eventName as string, properties = invalid as Object)
-	event = CreateObject("roAssociativeArray")
-	event.action = "track"
-	event.event = eventName
-	event.properties = properties
-	m.AddSessionDetails(event)
-	m.queue.push(event)
-End Function
+function Track(eventName as string, properties = invalid as Object)
 
-Function AddSessionDetails(event as Object)
-	event.timestamp = AnalyticsDateTime()
-	event.userId = m.userId
-	event.context = CreateObject("roAssociativeArray")
+    'print "Track " + eventName
 
-	if NOT event.DoesExist("options")
-		options = CreateObject("roAssociativeArray")
-		event.options = options
-	end if
+    event = CreateObject("roAssociativeArray")
+    event.action = "track"
+    event.event = eventName
+    event.properties = properties
+    m.AddSessionDetails(event)
+    m.queue.push(event)
+end function
 
-	library = CreateObject("roAssociativeArray")
-	library.name = "SegmentIO-Brightscript"
-	library.version = m.version
+function Identify()
+    Identify = CreateObject("roAssociativeArray")
+    Identify.SetModeCaseSensitive()
+    Identify.action = "identify"
+    m.AddSessionDetails(Identify)
 
-	event.options.library = library
+    m.queue.push(Identify)
+end function
 
-	device = CreateObject("roDeviceInfo")
+function AddSessionDetails(event as Object)
+    event.timestamp = AnalyticsDateTime()
+    event.userId = m.userId
+    event.context = CreateObject("roAssociativeArray")
 
-	deviceInfo = CreateObject("roAssociativeArray")
-	deviceInfo.model = device.GetModel()
-	deviceInfo.version = device.GetVersion()
-	deviceInfo.manufacturer = "Roku"
-	deviceInfo.name = device.GetModelDisplayName()
-	deviceInfo.id = device.GetDeviceUniqueId()
-	event.context.device = deviceInfo
+    if NOT event.DoesExist("options")
+        options = CreateObject("roAssociativeArray")
+        event.options = options
+    end if
 
-	event.context.app = CreateObject("roAssociativeArray")
-	event.context.app.name = m.AppName
-	event.context.app.version = m.AppVersion
-	event.context.useragent = m.useragent
+    library = CreateObject("roAssociativeArray")
+    library.name = "SegmentIO-Brightscript"
+    library.version = m.version
 
-	event.context.os = CreateObject("roAssociativeArray")
-	event.context.os.version = device.GetVersion()
-	event.context.os.name = "Roku"
+    event.options.library = library
 
-	if m.geoData <> invalid
-		location = CreateObject("roAssociativeArray")
-		if m.geoData.DoesExist("country_code") then location.country = m.geoData.country_code
-		if m.geoData.DoesExist("city") then location.city = m.geoData.city
-		if m.geoData.DoesExist("longitude") then location.longitude = m.geoData.longitude
-		if m.geoData.DoesExist("latitude") then location.latitude = m.geoData.latitude
-		event.context.location = location
+    device = CreateObject("roDeviceInfo")
 
-		if m.geoData.DoesExist("ip") then event.context.ip = m.geoData.ip
-	end if
+    deviceInfo = CreateObject("roAssociativeArray")
+    deviceInfo.model = device.GetModel()
+    deviceInfo.version = device.GetVersion()
+    deviceInfo.manufacturer = "Roku"
+    deviceInfo.name = device.GetModelDisplayName()
+    deviceInfo.id = device.GetDeviceUniqueId()
+    event.context.device = deviceInfo
 
-	event.context.ip = m.ipAddress
-	event.context.os = device.GetVersion()
+    event.context.app = CreateObject("roAssociativeArray")
+    event.context.app.name = m.AppName
+    event.context.app.version = m.AppVersion
+    event.context.useragent = m.useragent
 
-	locale = strReplace(device.GetCurrentLocale(), "_", "-")
-	event.context.locale = locale
+    event.context.os = CreateObject("roAssociativeArray")
+    event.context.os.version = device.GetVersion()
+    event.context.os.name = "Roku"
 
-	screen = CreateObject("roAssociativeArray")
-	screen.width = device.GetDisplaySize().w
-	screen.height = device.getDisplaySize().h
-	screen.type = device.GetDisplayType()
-	screen.mode = device.GetDisplayMode()
-	screen.ratio = device.GetDisplayAspectRatio()
-	event.context.screen = screen
+    if m.geoData <> invalid
+        location = CreateObject("roAssociativeArray")
+        if m.geoData.DoesExist("country_code") then location.country = m.geoData.country_code
+        if m.geoData.DoesExist("city") then location.city = m.geoData.city
+        if m.geoData.DoesExist("longitude") then location.longitude = m.geoData.longitude
+        if m.geoData.DoesExist("latitude") then location.latitude = m.geoData.latitude
+        event.context.location = location
 
-End Function
+        if m.geoData.DoesExist("ip") then event.context.ip = m.geoData.ip
+    end if
 
-Function submit_analytics() as Void
+    event.context.ip = m.ipAddress
+    event.context.os = device.GetVersion()
 
-	if m.queue.count() > 0 THEN
-		print "Submitting Analytics..."
-
-		batch = CreateObject("roAssociativeArray")
-		batch.SetModeCaseSensitive()
-		batch.batch = m.queue
-
-		batch.context = CreateObject("roAssociativeArray")
-		batch.context.SetModeCaseSensitive()
-
-		library = CreateObject("roAssociativeArray")
-		library.name = "SegmentIO-Brightscript"
-		library.version = m.version
-		batch.context.library = library
-
-		json = strReplace(FormatJson(batch), "userid", "userId") 'Because of the wonky way roAssociativeArrays keys don't care about case :\
-
-		m.queue.clear()
-
-		transfer = CreateObject("roUrlTransfer")
-
-		'Authentication
-		Auth = CreateObject("roByteArray")
-		Auth.FromAsciiString(m.apikey + ":")
-
-		transfer.AddHeader("Authorization", "Basic " + Auth.ToBase64String())
-		transfer.AddHeader("Accept", "application/json")
-		transfer.AddHeader("Content-type", "application/json")
-
-		transfer.SetUrl("https://api.segment.io/v1/import")
-		transfer.SetPort(m.port)
-
-		transfer.EnablePeerVerification(false)
-		transfer.EnableHostVerification(false)
-		transfer.RetainBodyOnError(true)
-
-		m.lastRequest = transfer
-
-		transfer.AsyncPostFromString(json)
-
-	end if
-	m.timer.mark()
-
-End Function
-
-Function handle_analytics(msg)
-	if m.timer.totalSeconds() > 60 then
-		m.Submit()
-	end if
-
-	if type(msg) = "roUrlEvent" AND m.lastRequest <> invalid AND m.lastRequest.GetIdentity() = msg.GetSourceIdentity()
-		responseString = msg.GetString()
-		response = ParseJSON(responseString)
-
-		'Check for errors
-		if response <> invalid AND NOT response.DoesExist("success")
-			Print "*** There was an error submitting Analytics to Segment.IO: " + responseString
-		end if
-
-		m.lastRequest = invalid
-	End If
-
-End Function
-
-Function AnalyticsDateTime() as String
-	date = CreateObject("roDateTime")
-	date.mark()
-	return DateToISO8601String(date, true)
-End Function
-
-
-'This queries the telize open GeoIP service Telize to get Geo and public IP data
-Function getGeoData_analytics()
-	url = "http://www.telize.com/geoip"
-
-	transfer = CreateObject("roUrlTransfer")
-	transfer.SetUrl(url)
-	data = transfer.GetToString()
-
-	object = ParseJSON(data)
-	m.geoData = object
-End Function
-
-
-'From http://forums.roku.com/viewtopic.php?p=336966&sid=393c92b8708c0ba9f00c2650d60fbd69
-Function DateToISO8601String(date As Object, includeZ = True As Boolean) As String
-   iso8601 = PadLeft(date.GetYear().ToStr(), "0", 4)
-   iso8601 = iso8601 + "-"
-   iso8601 = iso8601 + PadLeft(date.GetMonth().ToStr(), "0", 2)
-   iso8601 = iso8601 + "-"
-   iso8601 = iso8601 + PadLeft(date.GetDayOfMonth().ToStr(), "0", 2)
-   iso8601 = iso8601 + "T"
-   iso8601 = iso8601 + PadLeft(date.GetHours().ToStr(), "0", 2)
-   iso8601 = iso8601 + ":"
-   iso8601 = iso8601 + PadLeft(date.GetMinutes().ToStr(), "0", 2)
-   iso8601 = iso8601 + ":"
-   iso8601 = iso8601 + PadLeft(date.GetSeconds().ToStr(), "0", 2)
-   If includeZ Then
-      iso8601 = iso8601 + "Z"
-   End If
-   Return iso8601
-End Function
-
-Function PadLeft(value As String, padChar As String, totalLength As Integer) As String
-   While value.Len() < totalLength
-      value = padChar + value
-   End While
-   Return value
-End Function
+    locale = strReplace(device.GetCurrentLocale(), "_", "-")
+    event.context.locale = locale
+
+    screen = CreateObject("roAssociativeArray")
+    screen.width = device.GetDisplaySize().w
+    screen.height = device.getDisplaySize().h
+    screen.type = device.GetDisplayType()
+    screen.mode = device.GetDisplayMode()
+    screen.ratio = device.GetDisplayAspectRatio()
+    event.context.screen = screen
+
+end function
+
+function Submit() as Void
+
+    if m.queue.count() > 0 THEN
+        'print "Submitting Analytics..."
+
+        batch = CreateObject("roAssociativeArray")
+        batch.SetModeCaseSensitive()
+        batch.batch = m.queue
+
+        batch.context = CreateObject("roAssociativeArray")
+        batch.context.SetModeCaseSensitive()
+
+        library = CreateObject("roAssociativeArray")
+        library.name = "SegmentIO-Brightscript"
+        library.version = m.version
+        batch.context.library = library
+
+        json = strReplace(FormatJson(batch), "userid", "userId") 'Because of the wonky way roAssociativeArrays keys don't care about case :\
+
+        m.queue.clear()
+
+        transfer = CreateObject("roUrlTransfer")
+
+        'Authentication
+        Auth = CreateObject("roByteArray")
+        Auth.FromAsciiString(m.apikey + ":")
+
+        transfer.AddHeader("Authorization", "Basic " + Auth.ToBase64String())
+        transfer.AddHeader("Accept", "application/json")
+        transfer.AddHeader("Content-Type", "application/json")
+
+        transfer.SetUrl("https://api.segment.io/v1/import")
+        transfer.SetPort(m.port)
+
+        transfer.EnablePeerVerification(false)
+        transfer.EnableHostVerification(false)
+        transfer.RetainBodyOnError(true)
+
+        m.lastRequest = transfer
+
+        transfer.AsyncPostFromString(json)
+
+    end if
+    m.timer.mark()
+
+end function
+
+function Handle(msg)
+    'print "Analytics.Handle()"
+    if m.timer.totalSeconds() > 5 then
+        m.Submit()
+    end if
+
+    if type(msg) = "roUrlEvent" AND m.lastRequest <> invalid AND m.lastRequest.GetIdentity() = msg.GetSourceIdentity()
+        responseString = msg.GetString()
+        response = ParseJSON(responseString)
+
+        'Check for errors
+        if response <> invalid AND NOT response.DoesExist("success")
+            Print "*** There was an error submitting Analytics to Segment.IO: " + responseString
+        end if
+
+        m.lastRequest = invalid
+    end If
+
+end function
+
+function AnalyticsDateTime() as String
+    date = CreateObject("roDateTime")
+    return date.ToISOString() 'works as of 6.2 firmware
+end function
+
+function StrReplace(basestr As String, oldsub As String, newsub As String) As String
+   newstr = ""
+
+   i = 1
+   while i <= Len(basestr)
+       x = Instr(i, basestr, oldsub)
+       if x = 0 then
+           newstr = newstr + Mid(basestr, i)
+           exit while
+       endif
+
+       if x > i then
+           newstr = newstr + Mid(basestr, i, x-i)
+           i = x
+       endif
+
+       newstr = newstr + newsub
+       i = i + Len(oldsub)
+   end while
+
+   return newstr
+end function
+
+function GetExternalIP()
+    'print "GetExternalIP()"
+    
+    request = CreateObject("roUrlTransfer")
+    request.SetMessagePort(m.port)    
+    request.SetCertificatesFile("common:/certs/ca-bundle.crt")
+    request.InitClientCertificates()   
+    
+    request.SetUrl("https://api.ipify.org/?format=text")
+    
+    m.ipAddress = request.GetToString()
+end function

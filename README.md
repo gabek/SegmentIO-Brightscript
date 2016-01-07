@@ -20,28 +20,77 @@ The above will set up an initial "Identify" call to Segment.IO in order to start
 
 
 ###**Example**
-    MessagePort = GetGlobal().MessagePort
-    User = createObject("roDeviceInfo").GetDeviceUniqueId()
-    ApiKey = "ABCD1234"
+```
+sub Main()
+    print "This is a test, this is only a test"
     
-    Analytics = Analytics(User, ApiKey, MessagePort)
+    Port = CreateObject("roMessagePort") 
+    User = CreateObject("roDeviceInfo").GetDeviceUniqueId()
+    Analytics(User, "SegmentAPIKey", Port)                        
+        
+    showSpringBoard(Port)
+end sub
+
+function showSpringBoard(port as object)
+
+    Analytics = GetGlobalAA().Analytics
+
+    springBoard = CreateObject("roSpringboardScreen")
+    springBoard.SetBreadcrumbText("[location 1]", "[location2]")
+    springBoard.SetMessagePort(port)
+    springBoard.AddButton(1,"Play")
+    o = CreateObject("roAssociativeArray")
+    o.ContentType = "episode"
+    o.Title = "[Title]"
+    o.ShortDescriptionLine1 = "[ShortDescriptionLine1]"
+    o.ShortDescriptionLine2 = "[ShortDescriptionLine2]"
+    o.Description = ""
+    For i = 1 To 15
+        o.Description = o.Description + "[Description] "
+    End For
+    o.SDPosterUrl = ""
+    o.HDPosterUrl = ""
+    o.Rating = "NR"
+    o.StarRating = "75"
+    o.ReleaseDate = "[mm/dd/yyyy]"
+    o.Length = 5400
+    o.Categories = CreateObject("roArray", 10, true)
+    o.Categories.Push("[Category1]")
+    o.Categories.Push("[Category2]")
+    o.Categories.Push("[Category3]")
+    o.Actors = CreateObject("roArray", 10, true)
+    o.Actors.Push("[Actor1]")
+    o.Actors.Push("[Actor2]")
+    o.Actors.Push("[Actor3]")
+    o.Director = "[Director]"
+    springBoard.SetContent(o)
+    springBoard.Show()
     
-    'My event loop
-    while true
-        msg = wait(0,MessagePort)
-        'You do stuff with events in your app here
-        Analytics = GetSession().Analytics
-        Analytics.HandleAnalyticsEvents(msg)
+    count = 0
+    
+    while True
+        msg = wait(0, port)
+        if type(msg) = "roSpringboardScreenEvent"
+            if msg.isScreenClosed()
+                Return -1
+            else if msg.GetIndex() = 1
+                details = CreateObject("roAssociativeArray")
+                details.foo = "baz"
+                Analytics.Track("Roku Test " + count.ToStr(), details)
+                count = count + 1
+            end if
+        end if
+        Analytics.Handle(msg)
     end while
-
-
+end function    
+```
 
 **Tracking**
 -----------
 Utilizing your reference to the **Analytics** object you initialized above you can make tracking calls using **ViewScreen**, and **AddEvent**.
 
 ###**Screen Views**
-**ViewScreen** takes a simple string parameter like so: `Analytics.ViewScreen("VideoContentGridScreen")`
+**Page** takes a simple string parameter like so: `Analytics.Page("VideoContentGridScreen")`
 
 ###**Events**
 **LogEvent** takes in a string with the event that took place and an optional [roAssociativeArray](http://sdkdocs.roku.com/display/sdkdoc/roAssociativeArray) of details for your event.
@@ -50,8 +99,8 @@ Utilizing your reference to the **Analytics** object you initialized above you c
 	details = CreateObject("roAssociativeArray")
 	details.buttonName = "Back"
 	
-	Analytics = GetSession().Analytics
-	Analytics.AddEvent("Button Pressed", details)
+	Analytics = GetGlobalAA().Analytics
+	Analytics.Track("Button Pressed", details)
 	
 
 **Details**
