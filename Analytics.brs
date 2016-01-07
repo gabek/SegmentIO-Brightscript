@@ -13,7 +13,7 @@ function Analytics(userId as String, apiKey as String, port as Object) as Object
             Init: Init
             Submit: Submit
             Track: Track
-            ViewScreen: ViewScreen
+            Page: Page
             AddSessionDetails: AddSessionDetails
             Handle: Handle
             
@@ -55,7 +55,7 @@ function Init() as void
 
 end function
 
-function ViewScreen(screenName as String)
+function Page(screenName as String)
     event = CreateObject("roAssociativeArray")
     event.action = "screen"
     event.name = screenName
