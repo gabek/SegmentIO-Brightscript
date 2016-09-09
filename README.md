@@ -1,3 +1,7 @@
+UNSUPPORTED: I no longer use Segment with Roku, so I can't say if this still works or not.
+======================
+
+
 SegmentIO-Brightscript
 ======================
 
